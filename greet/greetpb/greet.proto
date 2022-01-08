@@ -33,9 +33,18 @@ message LongGreetResponse{
     string resulte = 1;
 }
 
+message GreetEveryOneRequest{
+    Greeting greeting = 1;
+}
+
+message GreetEveryOneResponse{
+    string resulte = 1;
+} 
+
 service GreetService{
     // Unary
-    rpc Greet(GreetRequest) returns (GreetResponse) {};
+    rpc Greet(GreetRequest) 
+    returns (GreetResponse) {};
 
     // Server Streaming
     rpc GreetManyTime(GreetManyTimeRequest) 
@@ -44,4 +53,8 @@ service GreetService{
     // Client Streaming
     rpc LongGreet(stream LongGreetRequest)
     returns (LongGreetResponse){};
+
+    // BiDi Streaming
+    rpc GreetEveryOne(stream GreetEveryOneRequest)
+    returns (stream GreetEveryOneResponse){};
 }
