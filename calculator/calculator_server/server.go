@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"grpc-go-course/calculator/calculatorpb"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -52,6 +53,31 @@ func (*server) PrimeNumberDecomposition(req *calculatorpb.PrimeNumberDecompositi
 
 	}
 	return nil
+}
+
+func (*server) ComputeAverage(stream calculatorpb.CalculatorService_ComputeAverageServer) error {
+
+	fmt.Printf("ComputeAverage RPC was invocked with stream requested\n")
+
+	var sum, count int64
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			// we has finish reading the client
+			avarage := float64(sum) / float64(count)
+			res := &calculatorpb.ComputeAverageResponse{
+				Average: avarage,
+			}
+			return stream.SendAndClose(res)
+
+		}
+		if err != nil {
+			log.Fatalf("Error while reading client strean: %v\n", err)
+		}
+		sum += req.GetNumber()
+		count++
+	}
 }
 
 func main() {
