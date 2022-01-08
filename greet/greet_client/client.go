@@ -113,7 +113,7 @@ func doClientStreaming(c greetpb.GreetServiceClient) {
 
 	// we iterate over message sloce and send it individually
 	for _, req := range requests {
-		fmt.Printf("Senfing req: %v\n", req)
+		fmt.Printf("Sending req: %v\n", req)
 		stream.Send(req)
 		time.Sleep(100 * time.Microsecond)
 	}
