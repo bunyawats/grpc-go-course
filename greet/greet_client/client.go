@@ -191,7 +191,6 @@ func doBiDiStreaming(c greetpb.GreetServiceClient) {
 				break
 			}
 			fmt.Printf("Received %v\n", res.GetResulte())
-
 		}
 
 		close(waitc)
