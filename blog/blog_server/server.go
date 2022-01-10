@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+	"gopkg.in/mgo.v2/bson"
 )
 
 var collection *mongo.Collection
@@ -68,6 +69,45 @@ func (*server) CreateBlog(ctx context.Context,
 			Content:  blog.GetContent(),
 		},
 	}, nil
+}
+
+func (*server) ReadBlog(ctx context.Context,
+	req *blogpb.ReadBlogRequest) (*blogpb.ReadBlogResponse, error) {
+
+	fmt.Println("ReadBlog requested")
+
+	blogId := req.GetBlogId()
+
+	oid, err := primitive.ObjectIDFromHex(blogId)
+	if err != nil {
+		log.Fatalf("Can not convert to OID: %v", err)
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("Invalid object id: %v", blogId),
+		)
+	}
+	data := &blogItem{}
+	filter := bson.M{"_id": oid}
+
+	res := collection.FindOne(ctx, filter)
+	if err := res.Decode(data); err != nil {
+		return nil, status.Error(
+			codes.NotFound,
+			fmt.Sprintf("Can not find blog withspecificed ID: %v", err),
+		)
+	}
+	return &blogpb.ReadBlogResponse{
+		Blog: dataToBlogPb(data),
+	}, nil
+}
+
+func dataToBlogPb(data *blogItem) *blogpb.Blog {
+	return &blogpb.Blog{
+		Id:       data.ID.Hex(),
+		AuthorId: data.AuthorID,
+		Title:    data.Title,
+		Content:  data.Content,
+	}
 }
 
 func main() {
