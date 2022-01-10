@@ -11,6 +11,10 @@ import (
 )
 
 func main() {
+
+	//if we crash the go code, we ger the file name and line number
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	fmt.Println("Hello Blog Client")
 
 	tls := false
@@ -34,6 +38,8 @@ func main() {
 	c := blogpb.NewBlogServicClient(cc)
 	//fmt.Printf("Create client %f\n\n", c)
 
+	// create the blog
+	fmt.Println("Create the blog")
 	blog := &blogpb.Blog{
 		AuthorId: "Bunyawat",
 		Title:    "My First Blog",
@@ -47,5 +53,26 @@ func main() {
 		log.Fatalf("Unexpected error: %v", err)
 	}
 	fmt.Printf("Blog had been create %v\n", createBlogRes)
+	blogId := createBlogRes.GetBlog().GetId()
+
+	// read the blog
+	fmt.Println("Read the blog")
+
+	_, readErr := c.ReadBlog(context.Background(), &blogpb.ReadBlogRequest{
+		BlogId: "random_id",
+	})
+	if readErr != nil {
+		fmt.Printf("Error happend while reading %v\n", readErr)
+	}
+
+	req := &blogpb.ReadBlogRequest{
+		BlogId: blogId,
+	}
+	readBlogRes, readErr2 := c.ReadBlog(context.Background(), req)
+	if readErr2 != nil {
+		fmt.Printf("Error happend while reading %v\n ", readErr2)
+	}
+
+	fmt.Printf("Blog was read: %v\n", readBlogRes)
 
 }

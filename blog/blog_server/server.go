@@ -80,7 +80,7 @@ func (*server) ReadBlog(ctx context.Context,
 
 	oid, err := primitive.ObjectIDFromHex(blogId)
 	if err != nil {
-		log.Fatalf("Can not convert to OID: %v", err)
+		log.Printf("Can not convert to OID: %v", err)
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			fmt.Sprintf("Invalid object id: %v", blogId),
