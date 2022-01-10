@@ -1,20 +1,35 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"grpc-go-course/blog/blogpb"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	"time"
 
+	"gopkg.in/mgo.v2/bson"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 )
 
+var collection *mongo.Collection
+
 type server struct {
 	blogpb.UnimplementedBlogServicServer
+}
+
+type blogItem struct {
+	ID       bson.ObjectId `bson:"_id,omitempty"`
+	AuthorID string        `bson:"author_id"`
+	Content  string        `bson:"content"`
+	Title    string        `bson:"title"`
 }
 
 func main() {
@@ -22,8 +37,19 @@ func main() {
 	//if we crash the go code, we ger the file name and line number
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	fmt.Println("Hello Blog Server")
+	fmt.Println("Connecting to MongoDB")
+	// connect to MongoDB
+	//connect to mongodb
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		log.Fatalf("Failed to cannect to MongoDB: %v\n ", err)
+	}
 
+	collection = client.Database("mydb").Collection("blog")
+
+	fmt.Println("Blog Service Started")
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v\n", err)
@@ -57,10 +83,13 @@ func main() {
 	}()
 
 	defer func() {
+
 		fmt.Println("Stoping the server")
 		s.Stop()
 		fmt.Println("Closing the listener")
 		lis.Close()
+		fmt.Println("Closing MongoDB connection")
+		client.Disconnect(ctx)
 		fmt.Println("End of Program")
 	}()
 
