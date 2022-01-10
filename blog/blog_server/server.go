@@ -10,8 +10,7 @@ import (
 	"os/signal"
 	"time"
 
-	"gopkg.in/mgo.v2/bson"
-
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
@@ -28,14 +27,16 @@ type server struct {
 }
 
 type blogItem struct {
-	ID       bson.ObjectId `bson:"_id,omitempty"`
-	AuthorID string        `bson:"author_id"`
-	Content  string        `bson:"content"`
-	Title    string        `bson:"title"`
+	ID       primitive.ObjectID `bson:"_id,omitempty"`
+	AuthorID string             `bson:"author_id"`
+	Content  string             `bson:"content"`
+	Title    string             `bson:"title"`
 }
 
 func (*server) CreateBlog(ctx context.Context,
 	reg *blogpb.CreateBlogRequest) (*blogpb.CreateBlogResponse, error) {
+
+	fmt.Println("CreateBlog requested")
 
 	blog := reg.GetBlog()
 
@@ -52,7 +53,7 @@ func (*server) CreateBlog(ctx context.Context,
 			fmt.Sprintf("Internal error: %v", err),
 		)
 	}
-	oid, ok := result.InsertedID.(bson.ObjectId)
+	oid, ok := result.InsertedID.(primitive.ObjectID)
 	if !ok {
 		return nil, status.Error(
 			codes.Internal,
