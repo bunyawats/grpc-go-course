@@ -15,8 +15,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 var collection *mongo.Collection
@@ -30,6 +32,41 @@ type blogItem struct {
 	AuthorID string        `bson:"author_id"`
 	Content  string        `bson:"content"`
 	Title    string        `bson:"title"`
+}
+
+func (*server) CreateBlog(ctx context.Context,
+	reg *blogpb.CreateBlogRequest) (*blogpb.CreateBlogResponse, error) {
+
+	blog := reg.GetBlog()
+
+	data := blogItem{
+		AuthorID: blog.AuthorId,
+		Title:    blog.Title,
+		Content:  blog.Content,
+	}
+
+	result, err := collection.InsertOne(context.Background(), data)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Internal error: %v", err),
+		)
+	}
+	oid, ok := result.InsertedID.(bson.ObjectId)
+	if !ok {
+		return nil, status.Error(
+			codes.Internal,
+			fmt.Sprint("Can not convert to OID"),
+		)
+	}
+	return &blogpb.CreateBlogResponse{
+		Blog: &blogpb.Blog{
+			Id:       oid.Hex(),
+			AuthorId: blog.GetAuthorId(),
+			Title:    blog.GetTitle(),
+			Content:  blog.GetContent(),
+		},
+	}, nil
 }
 
 func main() {
@@ -56,7 +93,7 @@ func main() {
 	}
 
 	opts := []grpc.ServerOption{}
-	tls := true
+	tls := false
 	if tls {
 		certFile := "ssl/private/server.crt"
 		keyFile := "ssl/private/server.pem"
