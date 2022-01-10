@@ -117,7 +117,7 @@ func (*server) FindMaximum(stream calculatorpb.CalculatorService_FindMaximumServ
 func (*server) SquareRoot(ctx context.Context, req *calculatorpb.SquareRootRequest) (
 	*calculatorpb.SquareRootResponse, error) {
 
-	fmt.Printf("Received  SquareRoot RPC request")
+	fmt.Println("Received  SquareRoot RPC request")
 
 	number := req.GetNumber()
 	if number < 0 {
