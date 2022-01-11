@@ -34,6 +34,14 @@ message UpdateBlogResponse{
     Blog blog = 1;
 }
 
+message DeleteBlogRequest{
+    string blog_id = 1;
+}
+
+message DeleteBlogResponse{
+    string blog_id = 1;
+}
+
 service BlogServic {
     rpc CreateBlog(CreateBlogRequest) returns (CreateBlogResponse){};
 
@@ -42,4 +50,7 @@ service BlogServic {
 
     //return NOT_FOUND if not found
     rpc UpdateBlog(UpdateBlogRequest) returns (UpdateBlogResponse){};
+
+        //return NOT_FOUND if not found
+        rpc DeleteBlog(DeleteBlogRequest) returns (DeleteBlogResponse){};
 }
