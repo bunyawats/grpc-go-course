@@ -56,7 +56,7 @@ func (*server) CreateBlog(ctx context.Context,
 	}
 	oid, ok := result.InsertedID.(primitive.ObjectID)
 	if !ok {
-		return nil, status.Error(
+		return nil, status.Errorf(
 			codes.Internal,
 			fmt.Sprint("Can not convert to OID"),
 		)
@@ -91,7 +91,7 @@ func (*server) ReadBlog(ctx context.Context,
 
 	res := collection.FindOne(ctx, filter)
 	if err := res.Decode(data); err != nil {
-		return nil, status.Error(
+		return nil, status.Errorf(
 			codes.NotFound,
 			fmt.Sprintf("Can not find blog withspecificed ID: %v", err),
 		)
@@ -130,7 +130,7 @@ func (*server) UpdateBlog(ctx context.Context,
 
 	res := collection.FindOne(ctx, filter)
 	if err := res.Decode(data); err != nil {
-		return nil, status.Error(
+		return nil, status.Errorf(
 			codes.NotFound,
 			fmt.Sprintf("Can not find blog withspecificed ID: %v", err),
 		)
@@ -141,7 +141,7 @@ func (*server) UpdateBlog(ctx context.Context,
 
 	_, updateErr := collection.ReplaceOne(context.Background(), filter, data)
 	if updateErr != nil {
-		return nil, status.Error(
+		return nil, status.Errorf(
 			codes.Internal,
 			fmt.Sprintf("Can not update object in MongoDB: %v", updateErr),
 		)
@@ -173,14 +173,14 @@ func (*server) DeleteBlog(ctx context.Context,
 
 	deleteRes, deleteErr := collection.DeleteOne(ctx, filter)
 	if deleteErr != nil {
-		return nil, status.Error(
+		return nil, status.Errorf(
 			codes.Internal,
 			fmt.Sprintf("Can not delete object in MongoDB: %v", deleteErr),
 		)
 	}
 
 	if deleteRes.DeletedCount == 0 {
-		return nil, status.Error(
+		return nil, status.Errorf(
 			codes.NotFound,
 			fmt.Sprintf("Can not find blog in MongoDB: %v", deleteErr),
 		)
@@ -190,6 +190,44 @@ func (*server) DeleteBlog(ctx context.Context,
 		BlogId: blogId,
 	}, nil
 
+}
+
+func (*server) ListBlog(reg *blogpb.ListBlogRequest,
+	stream blogpb.BlogServic_ListBlogServer) error {
+
+	fmt.Println("ListBlog requested")
+
+	cur, err := collection.Find(context.Background(), primitive.D{{}})
+	if err != nil {
+		return status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Unknow Internal Error: %v", err),
+		)
+	}
+	defer cur.Close(context.Background())
+
+	for cur.Next(context.Background()) {
+		data := &blogItem{}
+		if err := cur.Decode(data); err != nil {
+			return status.Errorf(
+				codes.Internal,
+				fmt.Sprintf("Error while decode data from MongoDB: %v", err),
+			)
+		} else {
+			stream.Send(&blogpb.ListBlogResponse{
+				Blog: dataToBlogPb(data),
+			})
+		}
+	}
+	if err := cur.Err(); err != nil {
+		return status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Unknown internal error: %v", err),
+		)
+	}
+	return nil
+
+	return nil
 }
 
 func main() {
