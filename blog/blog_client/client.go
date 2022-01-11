@@ -46,9 +46,10 @@ func main() {
 		Content:  "Content of my first blog",
 	}
 
-	createBlogRes, err := c.CreateBlog(context.Background(), &blogpb.CreateBlogRequest{
-		Blog: blog,
-	})
+	createBlogRes, err := c.CreateBlog(context.Background(),
+		&blogpb.CreateBlogRequest{
+			Blog: blog,
+		})
 	if err != nil {
 		log.Fatalf("Unexpected error: %v", err)
 	}
@@ -58,9 +59,10 @@ func main() {
 	// read the blog
 	fmt.Println("Read the blog")
 
-	_, readErr := c.ReadBlog(context.Background(), &blogpb.ReadBlogRequest{
-		BlogId: "random_id",
-	})
+	_, readErr := c.ReadBlog(context.Background(),
+		&blogpb.ReadBlogRequest{
+			BlogId: "random_id",
+		})
 	if readErr != nil {
 		fmt.Printf("Error happend while reading %v\n", readErr)
 	}
@@ -84,12 +86,25 @@ func main() {
 		Content:  "Updated Content",
 	}
 
-	updateRes, updateErr := c.UpdateBlog(context.Background(), &blogpb.UpdateBlogRequest{
-		Blog: newBlog,
-	})
+	updateRes, updateErr := c.UpdateBlog(context.Background(),
+		&blogpb.UpdateBlogRequest{
+			Blog: newBlog,
+		})
 	if updateErr != nil {
 		fmt.Printf("Error happened while updateing: %v\n", updateErr)
 	}
-	fmt.Printf("Blog was updated: %v", updateRes)
+	fmt.Printf("Blog was updated: %v\n", updateRes)
+
+	//delete Blog
+	fmt.Println("Delete the blog")
+	deleteRes, deleteErr := c.DeleteBlog(context.Background(),
+		&blogpb.DeleteBlogRequest{
+			BlogId: blogId,
+		})
+
+	if deleteErr != nil {
+		fmt.Printf("Error happened while deleting: %v \n", deleteErr)
+	}
+	fmt.Printf("Blog was deleted: %v \n", deleteRes)
 
 }
