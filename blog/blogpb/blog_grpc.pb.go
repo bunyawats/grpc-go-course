@@ -25,6 +25,8 @@ type BlogServicClient interface {
 	CreateBlog(ctx context.Context, in *CreateBlogRequest, opts ...grpc.CallOption) (*CreateBlogResponse, error)
 	//return NOT_FOUND if not found
 	ReadBlog(ctx context.Context, in *ReadBlogRequest, opts ...grpc.CallOption) (*ReadBlogResponse, error)
+	//return NOT_FOUND if not found
+	UpdateBlog(ctx context.Context, in *UpdateBlogRequest, opts ...grpc.CallOption) (*UpdateBlogResponse, error)
 }
 
 type blogServicClient struct {
@@ -53,6 +55,15 @@ func (c *blogServicClient) ReadBlog(ctx context.Context, in *ReadBlogRequest, op
 	return out, nil
 }
 
+func (c *blogServicClient) UpdateBlog(ctx context.Context, in *UpdateBlogRequest, opts ...grpc.CallOption) (*UpdateBlogResponse, error) {
+	out := new(UpdateBlogResponse)
+	err := c.cc.Invoke(ctx, "/blog.BlogServic/UpdateBlog", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BlogServicServer is the server API for BlogServic service.
 // All implementations must embed UnimplementedBlogServicServer
 // for forward compatibility
@@ -60,6 +71,8 @@ type BlogServicServer interface {
 	CreateBlog(context.Context, *CreateBlogRequest) (*CreateBlogResponse, error)
 	//return NOT_FOUND if not found
 	ReadBlog(context.Context, *ReadBlogRequest) (*ReadBlogResponse, error)
+	//return NOT_FOUND if not found
+	UpdateBlog(context.Context, *UpdateBlogRequest) (*UpdateBlogResponse, error)
 	mustEmbedUnimplementedBlogServicServer()
 }
 
@@ -72,6 +85,9 @@ func (UnimplementedBlogServicServer) CreateBlog(context.Context, *CreateBlogRequ
 }
 func (UnimplementedBlogServicServer) ReadBlog(context.Context, *ReadBlogRequest) (*ReadBlogResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReadBlog not implemented")
+}
+func (UnimplementedBlogServicServer) UpdateBlog(context.Context, *UpdateBlogRequest) (*UpdateBlogResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateBlog not implemented")
 }
 func (UnimplementedBlogServicServer) mustEmbedUnimplementedBlogServicServer() {}
 
@@ -122,6 +138,24 @@ func _BlogServic_ReadBlog_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BlogServic_UpdateBlog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateBlogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BlogServicServer).UpdateBlog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/blog.BlogServic/UpdateBlog",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BlogServicServer).UpdateBlog(ctx, req.(*UpdateBlogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BlogServic_ServiceDesc is the grpc.ServiceDesc for BlogServic service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -136,6 +170,10 @@ var BlogServic_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReadBlog",
 			Handler:    _BlogServic_ReadBlog_Handler,
+		},
+		{
+			MethodName: "UpdateBlog",
+			Handler:    _BlogServic_UpdateBlog_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

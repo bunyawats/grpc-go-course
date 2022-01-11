@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -18,7 +19,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
-	"gopkg.in/mgo.v2/bson"
 )
 
 var collection *mongo.Collection
@@ -108,6 +108,49 @@ func dataToBlogPb(data *blogItem) *blogpb.Blog {
 		Title:    data.Title,
 		Content:  data.Content,
 	}
+}
+
+func (*server) UpdateBlog(ctx context.Context,
+	req *blogpb.UpdateBlogRequest) (*blogpb.UpdateBlogResponse, error) {
+
+	fmt.Println("UpdateBlog requested")
+
+	blog := req.GetBlog()
+	oid, err := primitive.ObjectIDFromHex(blog.GetId())
+	if err != nil {
+		log.Printf("Can not convert to OID: %v", err)
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("Invalid object id: %v", oid),
+		)
+	}
+
+	data := &blogItem{}
+	filter := bson.M{"_id": oid}
+
+	res := collection.FindOne(ctx, filter)
+	if err := res.Decode(data); err != nil {
+		return nil, status.Error(
+			codes.NotFound,
+			fmt.Sprintf("Can not find blog withspecificed ID: %v", err),
+		)
+	}
+	data.AuthorID = blog.GetAuthorId()
+	data.Title = blog.GetTitle()
+	data.Content = blog.GetContent()
+
+	_, updateErr := collection.ReplaceOne(context.Background(), filter, data)
+	if updateErr != nil {
+		return nil, status.Error(
+			codes.Internal,
+			fmt.Sprintf("Can not update object in MongoDB: %v", updateErr),
+		)
+	}
+
+	return &blogpb.UpdateBlogResponse{
+		Blog: dataToBlogPb(data),
+	}, nil
+
 }
 
 func main() {
