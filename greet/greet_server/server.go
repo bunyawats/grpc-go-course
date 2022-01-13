@@ -12,7 +12,6 @@ import (
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -31,7 +30,7 @@ var (
 )
 
 func main() {
-	fmt.Println("Hello world")
+	fmt.Print("Hello world\n\n\n")
 
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
@@ -53,24 +52,44 @@ func main() {
 
 	zapLogger, _ := zap.NewProduction()
 	customFunc = grpc_zap.DefaultCodeToLevel
-
-	// Shared options for the logger, with a custom gRPC code to log level function.
-	zapOpts := []grpc_zap.Option{
-		grpc_zap.WithLevels(customFunc),
+	alwaysLoggingDeciderServer := func(
+		ctx context.Context,
+		fullMethodName string,
+		servingObject interface{},
+	) bool {
+		return true
 	}
-	// Make sure that log statements internal to gRPC library are logged using the zapLogger as well.
+
+	// zapOpts := []grpc_zap.Option{
+	// 	grpc_zap.WithLevels(customFunc),
+	// }
+
 	grpc_zap.ReplaceGrpcLoggerV2(zapLogger)
 
 	opts = append(opts,
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			grpc_ctxtags.UnaryServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
-			grpc_zap.UnaryServerInterceptor(zapLogger, zapOpts...),
+			// grpc_ctxtags.UnaryServerInterceptor(
+			// 	grpc_ctxtags.WithFieldExtractor(
+			// 		grpc_ctxtags.CodeGenRequestFieldExtractor),
+			// ),
+			// grpc_zap.UnaryServerInterceptor(zapLogger, zapOpts...),
+			grpc_zap.PayloadUnaryServerInterceptor(
+				zapLogger,
+				alwaysLoggingDeciderServer,
+			),
 		)))
 
 	opts = append(opts,
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
-			grpc_ctxtags.StreamServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
-			grpc_zap.StreamServerInterceptor(zapLogger, zapOpts...),
+			// grpc_ctxtags.StreamServerInterceptor(
+			// 	grpc_ctxtags.WithFieldExtractor(
+			// 		grpc_ctxtags.CodeGenRequestFieldExtractor),
+			// ),
+			// grpc_zap.StreamServerInterceptor(zapLogger, zapOpts...),
+			grpc_zap.PayloadStreamServerInterceptor(
+				zapLogger,
+				alwaysLoggingDeciderServer,
+			),
 		)))
 
 	s := grpc.NewServer(opts...)
@@ -87,7 +106,8 @@ func main() {
 }
 
 func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.GreetResponse, error) {
-	fmt.Printf("Greet function was invoked with %v\n", req)
+
+	// fmt.Printf("Greet function was invoked with %v\n", req)
 	firstName := req.Greeting.GetFirstName()
 	result := "Hello " + firstName
 	res := &greetpb.GreetResponse{
@@ -98,7 +118,7 @@ func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.G
 
 func (*server) GreetManyTime(req *greetpb.GreetManyTimeRequest, stream greetpb.GreetService_GreetManyTimeServer) error {
 
-	fmt.Printf("GreetManyTime RPC was invocked with %v\n", req)
+	// fmt.Printf("GreetManyTime RPC was invocked with %v\n", req)
 	firstName := req.Greeting.FirstName
 	for i := 0; i < 10; i++ {
 		result := "Hello " + firstName + " number " + strconv.Itoa(i)
@@ -113,8 +133,7 @@ func (*server) GreetManyTime(req *greetpb.GreetManyTimeRequest, stream greetpb.G
 
 func (*server) LongGreet(stream greetpb.GreetService_LongGreetServer) error {
 
-	fmt.Printf("LongGreet RPC was invocked with stream requested")
-
+	// fmt.Printf("LongGreet RPC was invocked with stream requested")
 	result := ""
 
 	for {
@@ -136,8 +155,7 @@ func (*server) LongGreet(stream greetpb.GreetService_LongGreetServer) error {
 
 func (*server) GreetEveryOne(stream greetpb.GreetService_GreetEveryOneServer) error {
 
-	fmt.Printf("GreetEveryOne RPC was invocked with stream requested")
-
+	// fmt.Printf("GreetEveryOne RPC was invocked with stream requested")
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -164,8 +182,7 @@ func (*server) GreetWithDeadline(
 	ctx context.Context, req *greetpb.GreetWithDeadlineRequest) (
 	*greetpb.GreetWithDeadlineResponse, error) {
 
-	fmt.Printf("Greet with Deadline function was invoked with %v\n", req)
-
+	// fmt.Printf("Greet with Deadline function was invoked with %v\n", req)
 	for i := 0; i < 3; i++ {
 		if ctx.Err() == context.Canceled {
 			fmt.Println("The client cancel the request!")
