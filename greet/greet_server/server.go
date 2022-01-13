@@ -10,6 +10,10 @@ import (
 	"strconv"
 	"time"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -19,6 +23,66 @@ import (
 
 type server struct {
 	greetpb.UnimplementedGreetServiceServer
+}
+
+var (
+	zapLogger  *zap.Logger
+	customFunc grpc_zap.CodeToLevel
+)
+
+func main() {
+	fmt.Println("Hello world")
+
+	lis, err := net.Listen("tcp", "0.0.0.0:50051")
+	if err != nil {
+		log.Fatalf("Failed to listen: %v\n", err)
+	}
+
+	opts := []grpc.ServerOption{}
+	tls := true
+	if tls {
+		certFile := "ssl/private/server.crt"
+		keyFile := "ssl/private/server.pem"
+		creds, sslErr := credentials.NewServerTLSFromFile(certFile, keyFile)
+		if sslErr != nil {
+			log.Fatalf("Failed loading certificates: %v", sslErr)
+			return
+		}
+		opts = append(opts, grpc.Creds(creds))
+	}
+
+	zapLogger, _ := zap.NewProduction()
+
+	// Shared options for the logger, with a custom gRPC code to log level function.
+	// zapOpts := []grpc_zap.Option{
+	// 	grpc_zap.WithLevels(customFunc),
+	// }
+	// Make sure that log statements internal to gRPC library are logged using the zapLogger as well.
+	grpc_zap.ReplaceGrpcLoggerV2(zapLogger)
+
+	opts = append(opts,
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_ctxtags.UnaryServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
+			grpc_zap.UnaryServerInterceptor(zapLogger),
+		)))
+
+	opts = append(opts,
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpc_ctxtags.StreamServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
+			grpc_zap.StreamServerInterceptor(zapLogger),
+		)))
+
+	s := grpc.NewServer(opts...)
+
+	greetpb.RegisterGreetServiceServer(s, &server{})
+
+	// Register reflection service on gRPC server.
+	reflection.Register(s)
+
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("faild to serve %v\n", err)
+	}
+
 }
 
 func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.GreetResponse, error) {
@@ -117,38 +181,4 @@ func (*server) GreetWithDeadline(
 		Resulte: result,
 	}
 	return res, nil
-}
-
-func main() {
-	fmt.Println("Hello world")
-
-	lis, err := net.Listen("tcp", "0.0.0.0:50051")
-	if err != nil {
-		log.Fatalf("Failed to listen: %v\n", err)
-	}
-
-	opts := []grpc.ServerOption{}
-	tls := true
-	if tls {
-		certFile := "ssl/private/server.crt"
-		keyFile := "ssl/private/server.pem"
-		creds, sslErr := credentials.NewServerTLSFromFile(certFile, keyFile)
-		if sslErr != nil {
-			log.Fatalf("Failed loading certificates: %v", sslErr)
-			return
-		}
-		opts = append(opts, grpc.Creds(creds))
-	}
-
-	s := grpc.NewServer(opts...)
-
-	greetpb.RegisterGreetServiceServer(s, &server{})
-
-	// Register reflection service on gRPC server.
-	reflection.Register(s)
-
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("faild to serve %v\n", err)
-	}
-
 }
