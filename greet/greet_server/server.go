@@ -52,24 +52,25 @@ func main() {
 	}
 
 	zapLogger, _ := zap.NewProduction()
+	customFunc = grpc_zap.DefaultCodeToLevel
 
 	// Shared options for the logger, with a custom gRPC code to log level function.
-	// zapOpts := []grpc_zap.Option{
-	// 	grpc_zap.WithLevels(customFunc),
-	// }
+	zapOpts := []grpc_zap.Option{
+		grpc_zap.WithLevels(customFunc),
+	}
 	// Make sure that log statements internal to gRPC library are logged using the zapLogger as well.
 	grpc_zap.ReplaceGrpcLoggerV2(zapLogger)
 
 	opts = append(opts,
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_ctxtags.UnaryServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
-			grpc_zap.UnaryServerInterceptor(zapLogger),
+			grpc_zap.UnaryServerInterceptor(zapLogger, zapOpts...),
 		)))
 
 	opts = append(opts,
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_ctxtags.StreamServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
-			grpc_zap.StreamServerInterceptor(zapLogger),
+			grpc_zap.StreamServerInterceptor(zapLogger, zapOpts...),
 		)))
 
 	s := grpc.NewServer(opts...)
